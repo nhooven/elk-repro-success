@@ -5,7 +5,7 @@
 # Affiliation: Department of Forestry and Natural Resources, University of Kentucky
 # Date began: 1 Jun 2021
 # Date completed: 9 Jul 2021
-# Date modified: 2 Aug 2021
+# Date modified: 22 Nov 2021
 # R version: 3.6.2
 
 #_____________________________________________________________________________________________________________
@@ -107,6 +107,14 @@ ggplot(data = indiv.np, aes(DOY, pred.np.prob)) +
 # 4a. Predict on unknowns (confirmed pregnant) ----
 #_____________________________________________________________________________________________________________
 
+# add in 18's data
+part.elk <- read.csv("elk_days_part.csv")
+
+other.data <- part.elk %>% filter(CollarID == 37718) %>%
+                    dplyr::select(1:9)
+
+elk.unknowns <- rbind(elk.unknowns, other.data)
+
 # predict on unk data
 pred.unk <- as.data.frame(predict(elk.model, newdata = elk.unknowns, type = "prob"))
 
@@ -118,9 +126,13 @@ elk.unknowns <- cbind(elk.unknowns, pred.unk.prob)
 # graph probability time series
 ggplot(data = elk.unknowns, aes(DOY, pred.unk.prob)) +
        geom_hline(yintercept = 0.7) +
+       geom_hline(yintercept = 0.85) +
        theme_bw() +
        facet_wrap(~CollarID) +
-       geom_point()
+       geom_point(alpha = 0.5, 
+                  color = "darkgreen") +
+       xlab("") +
+       ylab("Predicted probability")
 
 #_____________________________________________________________________________________________________________
 # 4c. Summarize number of probabilities ----
@@ -138,12 +150,10 @@ View(elk.unk.summaries)
 # 4d. Plot individual probabilities ----
 #_____________________________________________________________________________________________________________
 
-unk.id <- 103249
-
-indiv.unk <- elk.unknowns %>% filter(CollarID == unk.id)
+indiv.unk <- elk.unknowns %>% filter(CollarID == 103249)
 
 ggplot(data = indiv.unk, aes(DOY, pred.unk.prob)) +
-       geom_hline(yintercept = 0.7, linetype = "dashed") +
+       geom_hline(yintercept = 0.75, linetype = "dashed") +
        theme_bw() +
        theme(panel.grid = element_blank()) +
        facet_wrap(~CollarID) +
@@ -166,7 +176,7 @@ pred.part.prob <- pred.part[ ,2]
 elk.part <- cbind(elk.part, pred.part.prob)
 
 ggplot(data = indiv.part, aes(DOY, pred.part.prob)) +
-       geom_hline(yintercept = 0.7, linetype = "dashed") +
+       geom_hline(yintercept = 0.75, linetype = "dashed") +
        theme_bw() +
        theme(panel.grid = element_blank()) +
        facet_wrap(~CollarID) +
@@ -179,7 +189,7 @@ ggplot(data = indiv.part, aes(DOY, pred.part.prob)) +
 # 5a. Predict on 2020 collars in 2021 ----
 #_____________________________________________________________________________________________________________
 
-# predict on unk data
+# predict on thisyear data
 pred.thisyear <- as.data.frame(predict(elk.model, newdata = elk.thisyear, type = "prob"))
 
 # bind prob of "1" to main df
@@ -190,6 +200,7 @@ elk.thisyear <- cbind(elk.thisyear, pred.thisyear.prob)
 # graph probability time series
 ggplot(data = elk.thisyear, aes(DOY, pred.thisyear.prob)) +
        geom_hline(yintercept = 0.7) +
+       geom_hline(yintercept = 0.85) +
        theme_bw() +
        facet_wrap(~CollarID) +
        geom_point()
@@ -210,12 +221,10 @@ View(elk.thisyear.summaries)
 # 5d. Plot individual probabilities ----
 #_____________________________________________________________________________________________________________
 
-thisyear.id <- 37726
-
-indiv.thisyear <- elk.thisyear %>% filter(CollarID == thisyear.id)
+indiv.thisyear <- elk.thisyear %>% filter(CollarID == 37726)
 
 ggplot(data = indiv.thisyear, aes(DOY, pred.thisyear.prob)) +
-       geom_hline(yintercept = 0.7, linetype = "dashed") +
+       geom_hline(yintercept = 0.75, linetype = "dashed") +
        theme_bw() +
        theme(panel.grid = element_blank()) +
        geom_line() +

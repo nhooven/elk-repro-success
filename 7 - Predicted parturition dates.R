@@ -5,7 +5,7 @@
 # Affiliation: Department of Forestry and Natural Resources, University of Kentucky
 # Date began: 13 Aug 2021
 # Date completed: 13 Aug 2021 
-# Date modified: 17 Aug 2021
+# Date modified: 22 Nov 2021
 # R version: 3.6.2
 
 #_____________________________________________________________________________________________________________
@@ -30,6 +30,9 @@ load(paste0(getwd(), "/elk_model.Rdata"))
 # parturient elk
 elk.part <- read.csv("elk_days_part.csv")
 
+# remove 37718 and 45510
+elk.part <- elk.part %>% filter(CollarID %notin% c(37718, 45510))
+
 # non-pregnant/lost calf/outside of window
 elk.np <- read.csv("elk_np.csv")
 
@@ -51,12 +54,12 @@ elk.part.complete <- elk.part[complete.cases(elk.part), ]
 
 elk.part.complete <- cbind(elk.part.complete, pred.prob)
 
-part.id <- 46400
+part.id <- 45494
 
 indiv.part <- elk.part.complete %>% filter(CollarID == part.id)
 
 ggplot(data = indiv.part, aes(DOY, pred.prob)) +
-       geom_hline(yintercept = 0.70) +
+       geom_hline(yintercept = 0.75) +
        geom_vline(xintercept = indiv.part$DOY[which.max(indiv.part$pred.prob)], color = "darkgreen", size = 1.25) +
        theme_bw() +
        theme(panel.grid = element_blank(),
@@ -85,7 +88,7 @@ unk.id <- 103249
 indiv.unk <- elk.unknowns %>% filter(CollarID == unk.id)
 
 ggplot(data = indiv.unk, aes(DOY, pred.unk.prob)) +
-       geom_hline(yintercept = 0.70) +
+       geom_hline(yintercept = 0.75) +
        geom_vline(xintercept = indiv.unk$DOY[which.max(indiv.unk$pred.unk.prob)], color = "darkgreen", size = 1.25) +
        theme_bw() +
        theme(panel.grid = element_blank(),
@@ -108,7 +111,7 @@ pred.18.prob <- pred.18[ ,2]
 data.18 <- cbind(data.18, pred.18.prob)
 
 ggplot(data = data.18 , aes(DOY, pred.18.prob)) +
-       geom_hline(yintercept = 0.70) +
+       geom_hline(yintercept = 0.75) +
        geom_vline(xintercept = data.18 $DOY[which.max(data.18 $pred.18.prob)], color = "darkgreen", size = 1.25) +
        theme_bw() +
        theme(panel.grid = element_blank(),
@@ -132,12 +135,10 @@ pred.thisyear.prob <- pred.thisyear[ ,2]
 
 elk.thisyear <- cbind(elk.thisyear, pred.thisyear.prob)
 
-thisyear.id <- 37726
-
-indiv.thisyear <- elk.thisyear %>% filter(CollarID == thisyear.id)
+indiv.thisyear <- elk.thisyear %>% filter(CollarID == 37726)
 
 ggplot(data = indiv.thisyear, aes(DOY, pred.thisyear.prob)) +
-       geom_hline(yintercept = 0.70) +
+       geom_hline(yintercept = 0.75) +
        geom_vline(xintercept = indiv.thisyear$DOY[which.max(indiv.thisyear$pred.thisyear.prob)], color = "darkgreen", size = 1.25) +
        theme_bw() +
        theme(panel.grid = element_blank(),
@@ -157,7 +158,7 @@ ggplot(data = indiv.thisyear, aes(DOY, pred.thisyear.prob)) +
 part.dates <- read.csv("Part_dates.csv")
 
 # reorder factor levels
-part.dates$group <- factor(part.dates$group, levels = c("predicted", "confirmed"))
+part.dates$Group <- factor(part.dates$Group, levels = c("predicted", "confirmed"))
 
 ggplot() +
        theme_bw() +
@@ -177,7 +178,7 @@ ggplot() +
                  ymax = Inf),
                  alpha = 0.1) +
        geom_density(data = part.dates, 
-                    aes(x = DOY, color = group, fill = group),
+                    aes(x = DOY, color = Group, fill = Group),
                     size = 1.1,
                     alpha = 0.15) +
        theme(panel.grid = element_blank(),
@@ -186,32 +187,32 @@ ggplot() +
        ylab("") +
        xlab("Day of the year") +
        scale_x_continuous(breaks = seq(140, 250, 10)) +
-       scale_y_continuous(breaks = seq(0, 0.03, 0.01)) +
+       scale_y_continuous(breaks = seq(0, 0.04, 0.01)) +
        coord_cartesian(ylim = c(0, 0.042)) +
        scale_color_manual(values = c("#FF3300", "#6600CC")) +
        scale_fill_manual(values = c("#FF3300", "#6600CC")) + 
-       geom_segment(aes(x = median(part.dates$DOY[part.dates$group == "predicted"]),
-                        xend = median(part.dates$DOY[part.dates$group == "predicted"]),
+       geom_segment(aes(x = median(part.dates$DOY[part.dates$Group == "predicted"]),
+                        xend = median(part.dates$DOY[part.dates$Group == "predicted"]),
                         y = 0,
                         yend = Inf),
                     color = "#FF3300",
                     size = 1.1,
                     linetype = "dashed") +
-       geom_segment(aes(x = median(part.dates$DOY[part.dates$group == "confirmed"]),
-                        xend = median(part.dates$DOY[part.dates$group == "confirmed"]),
+       geom_segment(aes(x = median(part.dates$DOY[part.dates$Group == "confirmed"]),
+                        xend = median(part.dates$DOY[part.dates$Group == "confirmed"]),
                         y = 0,
                         yend = Inf),
                     color = "#6600CC",
                     size = 1.1,
                     linetype = "dashed") +
        geom_rug(data = part.dates, 
-                aes(x = DOY, color = group), 
+                aes(x = DOY, color = Group), 
                 size = 0.75)
        
 #_____________________________________________________________________________________________________________
 # 7. Summarize ----
 #_____________________________________________________________________________________________________________
 
-median(part.dates$DOY[part.dates$group == "confirmed"])
+median(part.dates$DOY[part.dates$Group == "confirmed"])
 
-median(part.dates$DOY[part.dates$group == "predicted"])
+median(part.dates$DOY[part.dates$Group == "predicted"])

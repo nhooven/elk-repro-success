@@ -5,7 +5,7 @@
 # Affiliation: Department of Forestry and Natural Resources, University of Kentucky
 # Date began: 13 Apr 2021
 # Date completed: 13 Apr 2021
-# Date modified: 1 Aug 2021
+# Date modified: 22 Nov 2021
 # R version: 3.6.2
 
 #_____________________________________________________________________________________________________________
@@ -17,13 +17,14 @@ library(sp)             # work with spatial objects
 library(amt)            # work with steps
 library(adehabitatHR)   # fit MCPs
 library(mefa4)          # notin function
+library(raster)         # read in rasters
 
 #_____________________________________________________________________________________________________________
 # 2. Read in and rbind relocation data ----
 #_____________________________________________________________________________________________________________
 
-vectronic.data <- read.csv("D:/Elk project/Data analysis/Raw data processing/Relocations_vectronic_1.csv")
-lotek.data <- read.csv("D:/Elk project/Data analysis/Raw data processing/Relocations_lotek_1.csv")
+vectronic.data <- read.csv("G:/Elk project/Data analysis/Raw data processing/Relocations_vectronic_1.csv")
+lotek.data <- read.csv("G:/Elk project/Data analysis/Raw data processing/Relocations_lotek_1.csv")
 
 # get dates into correct formats
 vectronic.data$t <- as.POSIXct(vectronic.data$t, tz = "America/New_York")
@@ -40,6 +41,19 @@ projection <- CRS("+proj=utm +zone=17 +ellps=GRS80 +units=m +no_defs")
 startdate.2020 <- as.POSIXct("2020-01-01 00:00:00", tz = "America/New_York")
 startdate.2021 <- as.POSIXct("2021-01-01 00:00:00", tz = "America/New_York")
 
+# include rasters for habitat data
+raster.dir <- "G:/Elk project/Elk Zone rasters (7-20-21)"
+
+# Read in each raster
+canopy <- raster(paste0(raster.dir, "/", "canopy.tif"))
+
+TRI <- raster(paste0(raster.dir, "/", "TRI_10.tif"))
+
+dEdge <- raster(paste0(raster.dir, "/", "dEdge.tif"))
+
+# define raster projection
+raster.proj <- TRI@crs
+
 #_____________________________________________________________________________________________________________
 # 3. Mean step length (3 days) ----
 #_____________________________________________________________________________________________________________
@@ -50,7 +64,8 @@ startdate.2021 <- as.POSIXct("2021-01-01 00:00:00", tz = "America/New_York")
 #_____________________________________________________________________________________________________________
 
 # define elk whose birth status is unknown
-elk.unknowns.2020 <- as.vector(c(37703, 37707, 101940, 101968, 101969, 101978, 102492, 102493, 102495, 102536,
+elk.unknowns.2020 <- as.vector(c(37703, 37707, 101940, 101946, 101948, 101954, 101955, 101962, 101966,
+                                 101968, 101969, 101972, 101978, 102492, 102493, 102495, 102536,
                                  103176, 103177, 103178, 103183, 103249))
 
 # define timeframe
@@ -136,7 +151,7 @@ for (x in elk.unknowns.2020) {
 #_____________________________________________________________________________________________________________
 
 # define unknown elk
-elk.unknowns.2021 <- as.vector(c(45504, 45470, 103184, 103186, 103173, 103251))
+elk.unknowns.2021 <- as.vector(c(45504, 45470, 101974, 101977, 101980, 103184, 103186, 103173, 103251))
 
 # define timeframe
 start.time.2 <- as.POSIXct("2021-05-15 00:00:00")
@@ -442,6 +457,177 @@ for (x in elk.unknowns.2021) {
 }
 
 #_____________________________________________________________________________________________________________
+# 6. Five-day average canopy cover, TRI, and dEdge ----
+#_____________________________________________________________________________________________________________
+# 6a. 2020 - Elk with unknown status ----
+#_____________________________________________________________________________________________________________
+
+# define elk whose birth status is unknown
+elk.unknowns.2020 <- as.vector(c(37703, 37707, 101940, 101946, 101948, 101954, 101955, 101962, 101966,
+                                 101968, 101969, 101972, 101978, 102492, 102493, 102495, 102536,
+                                 103176, 103177, 103178, 103183, 103249))
+
+# for loop to run through each elk that gave birth
+elk.unknowns.landscape.2020 <- data.frame()
+
+for (x in elk.unknowns.2020) {
+  
+  CollarID <- x
+  
+  indiv.data <- elk.data %>% filter(Animal == CollarID)
+  
+  # filter days to all focal days
+  indiv.data.1 <- indiv.data %>% filter(t < (end.time.1 + 2*24*60*60) & t >= (start.time.1 - 2*24*60*60))
+  
+  # create a SPDF
+  indiv.spdf <- SpatialPointsDataFrame(coords = indiv.data.1[ ,c("x", "y")],
+                                       proj4string = projection,
+                                       data = indiv.data.1)
+  
+  # transform to correct crs
+  indiv.spdf.proj <- spTransform(indiv.spdf, raster.proj)
+  
+  # sample from each raster
+  indiv.spdf.proj@data$canopy <- raster::extract(canopy, indiv.spdf.proj, method = "simple")
+  
+  indiv.spdf.proj@data$TRI <- raster::extract(TRI, indiv.spdf.proj, method = "simple")
+  
+  indiv.spdf.proj@data$dEdge <- raster::extract(dEdge, indiv.spdf.proj, method = "simple")
+  
+  # convert to data.frame
+  indiv.landscape <- indiv.spdf.proj@data
+  
+  # add day DOY variable
+  indiv.landscape.summary <- indiv.landscape %>% mutate(day = as.Date(t, tz = "America/New_York")) %>%
+    mutate(DOY = as.integer(difftime(day, startdate.2020, units = "days")) + 1)
+  
+  # remove 'day' variable and add CollarID
+  indiv.landscape.summary <- indiv.landscape.summary  %>% dplyr::select(DOY, canopy, TRI, dEdge) %>%
+    mutate(CollarID = CollarID)
+  
+  # if one of the DOYs in the sequence isn't there, add a blank column
+  for (y in 134:199) {
+    
+    if (y %notin% indiv.landscape.summary$DOY) {
+      indiv.landscape.summary <- rbind(indiv.landscape.summary, data.frame(DOY = y, 
+                                                                           canopy = NA,
+                                                                           TRI = NA, 
+                                                                           dEdge = NA,
+                                                                           CollarID = CollarID))
+    }
+    
+  }
+  
+  # for loop which calculates 5-day averages of each variable
+  indiv.landscape.summary.1 <- data.frame()
+  
+  for (z in 135:197) {
+    
+    # subset data
+    focal.points <- indiv.landscape.summary %>% filter(DOY %in% c(z - 2, z, z + 2))
+    
+    # bind into a df with the DOY
+    focal.summary <- data.frame(Animal = CollarID,
+                                canopy.5day = mean(focal.points$canopy, na.rm = TRUE),
+                                TRI.5day = mean(focal.points$TRI, na.rm = TRUE),
+                                dEdge.5day = mean(focal.points$dEdge, na.rm = TRUE),
+                                DOY = z)
+    
+    # bind to master df
+    indiv.landscape.summary.1 <- rbind(indiv.landscape.summary.1, focal.summary)
+    
+  }
+  
+  # keep only those DOYs we need
+  indiv.landscape.summary.1 <- indiv.landscape.summary.1 %>% filter(DOY > 135 & DOY < 198)
+  
+  elk.unknowns.landscape.2020 <- rbind(elk.unknowns.landscape.2020, indiv.landscape.summary.1)
+  
+}
+
+#_____________________________________________________________________________________________________________
+# 6b. 2021 - Elk with unknown status ----
+#_____________________________________________________________________________________________________________
+
+# for loop to run through each elk that gave birth
+elk.unknowns.landscape.2021 <- data.frame()
+
+for (x in elk.unknowns.2021) {
+  
+  CollarID <- x
+  
+  indiv.data <- elk.data %>% filter(Animal == CollarID)
+  
+  # filter days to all focal days
+  indiv.data.1 <- indiv.data %>% filter(t < (end.time.2 + 2*24*60*60) & t >= (start.time.2 - 2*24*60*60))
+  
+  # create a SPDF
+  indiv.spdf <- SpatialPointsDataFrame(coords = indiv.data.1[ ,c("x", "y")],
+                                       proj4string = projection,
+                                       data = indiv.data.1)
+  
+  # transform to correct crs
+  indiv.spdf.proj <- spTransform(indiv.spdf, raster.proj)
+  
+  # sample from each raster
+  indiv.spdf.proj@data$canopy <- raster::extract(canopy, indiv.spdf.proj, method = "simple")
+  
+  indiv.spdf.proj@data$TRI <- raster::extract(TRI, indiv.spdf.proj, method = "simple")
+  
+  indiv.spdf.proj@data$dEdge <- raster::extract(dEdge, indiv.spdf.proj, method = "simple")
+  
+  # convert to data.frame
+  indiv.landscape <- indiv.spdf.proj@data
+  
+  # add day DOY variable
+  indiv.landscape.summary <- indiv.landscape %>% mutate(day = as.Date(t, tz = "America/New_York")) %>%
+    mutate(DOY = as.integer(difftime(day, startdate.2021, units = "days")) + 1)
+  
+  # remove 'day' variable and add CollarID
+  indiv.landscape.summary <- indiv.landscape.summary %>% dplyr::select(DOY, canopy, TRI, dEdge) %>%
+    mutate(CollarID = CollarID)
+  
+  # if one of the DOYs in the sequence isn't there, add a blank column
+  for (y in 133:197) {
+    
+    if (y %notin% indiv.landscape.summary$DOY) {
+      indiv.landscape.summary <- rbind(indiv.landscape.summary, data.frame(DOY = y, 
+                                                                           canopy = NA,
+                                                                           TRI = NA, 
+                                                                           dEdge = NA,
+                                                                           CollarID = CollarID))
+    }
+    
+  }
+  
+  # for loop which calculates 5-day averages of each variable
+  indiv.landscape.summary.1 <- data.frame()
+  
+  for (z in 133:197) {
+    
+    # subset data
+    focal.points <- indiv.landscape.summary %>% filter(DOY %in% c(z - 2, z, z + 2))
+    
+    # bind into a df with the DOY
+    focal.summary <- data.frame(Animal = CollarID,
+                                canopy.5day = mean(focal.points$canopy, na.rm = TRUE),
+                                TRI.5day = mean(focal.points$TRI, na.rm = TRUE),
+                                dEdge.5day = mean(focal.points$dEdge, na.rm = TRUE),
+                                DOY = z)
+    
+    # bind to master df
+    indiv.landscape.summary.1 <- rbind(indiv.landscape.summary.1, focal.summary)
+    
+  }
+  
+  # keep only those DOYs we need
+  indiv.landscape.summary.1 <- indiv.landscape.summary.1 %>% filter(DOY > 134 & DOY < 197)
+  
+  elk.unknowns.landscape.2021 <- rbind(elk.unknowns.landscape.2021, indiv.landscape.summary.1)
+  
+}
+
+#_____________________________________________________________________________________________________________
 # 5. Merge all dataframes ----
 #_____________________________________________________________________________________________________________
 
@@ -450,14 +636,20 @@ elk.unknowns.2020 <- data.frame(DOY = 136:197,
                                 CollarID = elk.unknown.steps.2020$Animal,
                                 sl.3day = elk.unknown.steps.2020$sl.3day,
                                 sl.post7 = elk.unknown.calf.steps.2020$sl.post7,
-                                mcp = elk.unknown.mcp.2020$MCP)
+                                mcp = elk.unknown.mcp.2020$MCP,
+                                canopy.5day = elk.unknowns.landscape.2020$canopy.5day,
+                                TRI.5day = elk.unknowns.landscape.2020$TRI.5day,
+                                dEdge.5day = elk.unknowns.landscape.2020$dEdge.5day)
 
 # 2021
 elk.unknowns.2021 <- data.frame(DOY = 135:196,
                                 CollarID = elk.unknown.steps.2021$Animal,
                                 sl.3day = elk.unknown.steps.2021$sl.3day,
                                 sl.post7 = elk.unknown.calf.steps.2021$sl.post7,
-                                mcp = elk.unknown.mcp.2021$MCP)
+                                mcp = elk.unknown.mcp.2021$MCP,
+                                canopy.5day = elk.unknowns.landscape.2021$canopy.5day,
+                                TRI.5day = elk.unknowns.landscape.2021$TRI.5day,
+                                dEdge.5day = elk.unknowns.landscape.2021$dEdge.5day)
 
 #_____________________________________________________________________________________________________________
 # 8. rbind together and write to .csv ----

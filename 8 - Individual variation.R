@@ -5,7 +5,7 @@
 # Affiliation: Department of Forestry and Natural Resources, University of Kentucky
 # Date began: 17 Aug 2021
 # Date completed: 17 Aug 2021
-# Date modified: 28 Oct 2021
+# Date modified: 23 Nov 2021
 # R version: 3.6.2
 
 #_____________________________________________________________________________________________________________
@@ -48,7 +48,7 @@ elk.births.2020 <- as.vector(c(37705, 37706, 37708, 37709, 37710, 37711, 37712,
                                37722, 37723, 37724, 37725, 37726, 37727))
 
 
-elk.part.1 <- elk.part %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp) %>%
+elk.part.1 <- elk.part %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp, canopy.5day) %>%
                                   mutate(Year = ifelse(CollarID %in% elk.births.2020,
                                                        2020,
                                                        2021),
@@ -58,7 +58,7 @@ elk.part.1 <- elk.part %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp) %>%
 elk.np.2020 <- as.vector(c(37704, 102489, 102491, 102497, 103172, 103174, 103179, 103181, 103182))
 
 
-elk.np.1 <- elk.np %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp) %>%
+elk.np.1 <- elk.np %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp, canopy.5day) %>%
                               mutate(Year = ifelse(CollarID %in% elk.np.2020,
                                                    2020,
                                                    2021),
@@ -69,14 +69,14 @@ elk.unk.2020 <- as.vector(c(37703, 37707, 101940, 101968, 101969, 101978, 102492
                             103176, 103177, 103178, 103183, 103249))
 
 
-elk.unknowns.1 <- elk.unknowns %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp) %>%
+elk.unknowns.1 <- elk.unknowns %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp, canopy.5day) %>%
                                           mutate(Year = ifelse(CollarID %in% elk.unk.2020,
                                                                2020,
                                                                2021),
                                                  Group = "B")
 
 # Testing set - Group C (2020 collars in 2021)
-elk.thisyear.1 <- elk.thisyear %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp) %>%
+elk.thisyear.1 <- elk.thisyear %>% dplyr::select(CollarID, sl.3day, sl.post7, mcp, canopy.5day) %>%
                                           mutate(Year = 2021, 
                                                  Group = "C")
 
@@ -85,8 +85,8 @@ elk.thisyear.1 <- elk.thisyear %>% dplyr::select(CollarID, sl.3day, sl.post7, mc
 #_____________________________________________________________________________________________________________
 
 # Training set
-elk.part.yes <- as.vector(c(37705, 37708, 37710, 37711, 37712, 37714, 37715, 37716, 37717, 37719, 37720,
-                            37722, 37723, 37724, 37725, 37726, 45493, 45494, 45495, 45496, 45498, 45500,
+elk.part.yes <- as.vector(c(37705, 37706, 37708, 37710, 37711, 37712, 37714, 37715, 37716, 37717, 37719, 37720,
+                            37722, 37723, 37724, 37725, 37726, 45492, 45493, 45494, 45495, 45496, 45498, 45500,
                             45501, 45505, 45507, 45509, 45511, 46393, 46394, 46397, 46401, 46402))
 
 elk.part.1 <- elk.part.1 %>% mutate(Pred.status = ifelse(CollarID %in% elk.part.yes,
@@ -101,14 +101,14 @@ elk.np.1 <- elk.np.1 %>% mutate(Pred.status = ifelse(CollarID %in% elk.np.yes,
                                                      0))
 
 # Testing set - Group B (unknowns)
-elk.unknowns.yes <- as.vector(c(37718, 101978, 102492, 102536, 103177, 103183, 103186, 103249))
+elk.unknowns.yes <- as.vector(c(37718, 101978, 102492, 102536, 103173, 103177, 103183, 103186, 103249))
 
 elk.unknowns.1 <- elk.unknowns.1 %>% mutate(Pred.status = ifelse(CollarID %in% elk.unknowns.yes,
                                             1,
                                             0))
 
 # Testing set - Group C (2020 collars in 2021)
-elk.thisyear.yes <- as.vector(c(37703, 37705, 37708, 37709, 37710, 37711, 37714, 37716, 37718,
+elk.thisyear.yes <- as.vector(c(37703, 37704, 37705, 37708, 37709, 37710, 37711, 37714, 37716, 37718,
                                 37722, 37726))
 
 elk.thisyear.1 <- elk.thisyear.1 %>% mutate(Pred.status = ifelse(CollarID %in% elk.thisyear.yes,
@@ -418,6 +418,7 @@ repeat.elk.summary <- repeat.elk %>% group_by(CollarID, Group) %>%
                                      summarize(mean.sl.3day = mean(sl.3day, na.rm = TRUE),
                                                mean.sl.post7 = mean(sl.post7, na.rm = TRUE),
                                                mean.mcp = mean(mcp, na.rm = TRUE),
+                                               mean.canopy = mean(canopy.5day, na.rm = TRUE),
                                                Pred.status = median(Pred.status, na.rm = TRUE))
 
 ggplot(data = repeat.elk.summary, aes(x = Group, y = mean.sl.3day, group = CollarID)) +
@@ -434,8 +435,8 @@ ggplot(data = repeat.elk.summary, aes(x = Group, y = mean.sl.3day, group = Colla
 # 11. 3x4 plot ----
 #_____________________________________________________________________________________________________________
 
-correct.part <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37716, 37722, 37726))
-correct.np <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37712, 37719, 37720, 37723, 37725))
+correct.part <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37716, 37719, 37722, 37726))
+correct.np <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37712, 37720, 37723, 37725))
 incorrect.part <- repeat.elk.summary %>% filter(CollarID == 37709)
 
 # correct part, sl.3day
@@ -713,8 +714,8 @@ plot_grid(nrow = 3, ncol = 4, rel_widths = c(1.2, 1, 1, 1),
 # 12. 3X2 plot ----
 #_____________________________________________________________________________________________________________
 
-consist <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37716, 37722, 37726))
-inconsist <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37709, 37712, 37719, 37720, 37723, 37725))
+consist <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37716, 37719, 37722, 37726))
+inconsist <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37709, 37712, 37720, 37723, 37725))
 
 consist <- consist %>% mutate(category = "correct")
 inconsist <- inconsist %>% mutate(category = ifelse(CollarID == 37709, "incorrect", "correct"))
@@ -738,7 +739,7 @@ plot.1b <- ggplot(data = consist, aes(x = Group, y = mean.sl.3day, group = Colla
                         plot.title = element_text(size = 8)) +
                   coord_cartesian(xlim = c(1.4, 1.6),
                                   ylim = c(250, 650)) +
-                  ylab("Mean step length - 3 day") +
+                  ylab("sl.3day") +
                   scale_y_continuous(breaks = seq(250, 650, 100)) +
                   ggtitle("Consistent predicted status") +
                   scale_shape_manual(values = c(21, 24))
@@ -765,7 +766,7 @@ plot.2b <- ggplot(data = inconsist, aes(x = Group, y = mean.sl.3day, group = Col
                        plot.title = element_text(size = 8)) +
                  coord_cartesian(xlim = c(1.4, 1.6),
                                  ylim = c(250, 650)) +
-                 ylab("Mean step length - 3 day") +
+                 ylab("sl.3day") +
                  scale_y_continuous(breaks = seq(250, 650, 100)) +
                  ggtitle("Inconsistent predicted status") +
                  scale_shape_manual(values = c(21, 24))
@@ -789,7 +790,7 @@ plot.3b <- ggplot(data = consist, aes(x = Group, y = mean.sl.post7, group = Coll
                         axis.ticks.x = element_blank()) +
                   coord_cartesian(xlim = c(1.4, 1.6),
                                   ylim = c(250, 650)) +
-                  ylab("Mean step length - 7 days post") +
+                  ylab("sl.post7") +
                   scale_y_continuous(breaks = seq(250, 650, 100)) +
                  scale_shape_manual(values = c(21, 24))
 
@@ -814,7 +815,7 @@ plot.4b <- ggplot(data = inconsist, aes(x = Group, y = mean.sl.post7, group = Co
                         axis.ticks.y = element_blank()) +
                   coord_cartesian(xlim = c(1.4, 1.6),
                                   ylim = c(250, 650)) +
-                  ylab("Mean step length - 7 days post") +
+                  ylab("sl.post7") +
                   scale_y_continuous(breaks = seq(250, 650, 100)) +
                  scale_shape_manual(values = c(21, 24))
 
@@ -835,7 +836,7 @@ plot.5b <- ggplot(data = consist, aes(x = Group, y = mean.mcp, group = CollarID)
                         legend.position = "none") +
                   coord_cartesian(xlim = c(1.4, 1.6),
                                   ylim = c(0.25, 3.25)) +
-                  ylab("MCP - 11 day") +
+                  ylab("mcp") +
                   scale_y_continuous(breaks = seq(0.25, 3.25, 0.5)) +
                  scale_shape_manual(values = c(21, 24))
 
@@ -858,7 +859,7 @@ plot.6b <- ggplot(data = inconsist, aes(x = Group, y = mean.mcp, group = CollarI
                         axis.ticks.y = element_blank()) +
                   coord_cartesian(xlim = c(1.4, 1.6),
                                   ylim = c(0.25, 3.25)) +
-                  ylab("MCP - 11 day") +
+                  ylab("mcp") +
                   scale_y_continuous(breaks = seq(0.25, 3.25, 0.5)) +
                   scale_shape_manual(values = c(21, 24))
 
@@ -875,18 +876,20 @@ rpt(mean.sl.post7 ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.summa
 rpt(mean.mcp ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.summary, nboot = 1000, npermut = 0)
 
 # those with agreement
-repeat.elk.agreement <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37716, 37722, 37726))
+repeat.elk.agreement <- repeat.elk.summary %>% filter(CollarID %in% c(37705, 37708, 37710, 37711, 37714, 37719, 37716, 37722, 37726))
 
 rpt(mean.sl.3day ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.agreement, nboot = 1000, npermut = 0)
 rpt(mean.sl.post7 ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.agreement, nboot = 1000, npermut = 0)
 rpt(mean.mcp ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.agreement, nboot = 1000, npermut = 0)
+rpt(mean.canopy ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.agreement, nboot = 1000, npermut = 0)
 
 # those with disagreement
-repeat.elk.disagreement <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37712, 37719, 37720, 37723, 37725, 37709))
+repeat.elk.disagreement <- repeat.elk.summary %>% filter(CollarID %in% c(37706, 37712, 37720, 37723, 37725, 37709))
 
 rpt(mean.sl.3day ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.disagreement, nboot = 1000, npermut = 0)
 rpt(mean.sl.post7 ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.disagreement, nboot = 1000, npermut = 0)
 rpt(mean.mcp ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.disagreement, nboot = 1000, npermut = 0)
+rpt(mean.canopy ~ (1 | CollarID), grname = "CollarID", data = repeat.elk.disagreement, nboot = 1000, npermut = 0)
 
 #_____________________________________________________________________________________________________________
 # 14. Plot comparing parturient and non-parturient individuals ----
@@ -907,13 +910,12 @@ elk.data.indiv <- elk.data.complete %>% filter(CollarID == 37711)
 
 elk.part.plot <- ggplot(data = elk.data.indiv, aes(x = DOY, y = pred.prob)) +
         theme_bw() +
-        geom_hline(yintercept = 0.7) +
-        geom_hline(yintercept = 0.85) +
+        geom_hline(yintercept = 0.75) +
         geom_vline(xintercept = elk.data.indiv$DOY[which.max(elk.data.indiv$pred.prob)],
                    linetype = "dashed") +
         geom_point(size = 2,
                    shape = 21,
-                   fill = "blue",
+                   fill = "deepskyblue1",
                    stroke = 1) +
         theme(panel.grid = element_blank()) +
         ylab("Predicted probability") +
@@ -934,8 +936,7 @@ elk.np.indiv <- elk.np %>% filter(CollarID == 45469)
 
 elk.np.plot <- ggplot(data = elk.np.indiv, aes(x = DOY, y = pred.np.prob)) +
         theme_bw() +
-        geom_hline(yintercept = 0.7) +
-        geom_hline(yintercept = 0.85) +
+        geom_hline(yintercept = 0.75) +
         geom_point(size = 2,
                    shape = 21,
                    fill = "orange",

@@ -5,7 +5,7 @@
 # Affiliation: Department of Forestry and Natural Resources, University of Kentucky
 # Date began: 2 Aug 2021
 # Date completed: 2 Aug 2021
-# Date modified: 
+# Date modified: 22 Nov 2021
 # R version: 3.6.2
 
 #_____________________________________________________________________________________________________________
@@ -19,7 +19,7 @@ library(cowplot)       # arrange plots
 # 2. Read in data ----
 #_____________________________________________________________________________________________________________
 
-rules <- read.csv("Decision rules.csv") 
+rules <- read.csv("Decision rules 3.csv") 
 
 str(rules)
 
@@ -35,7 +35,7 @@ plot.palette <- c("#FF3300", "#009900", "#000099")
 rules.all <- rules %>% filter(type == "all")
 
 plot.all <- ggplot() +
-            geom_vline(xintercept = 0.7, size = 2, color = "lightgray") +
+            geom_vline(xintercept = 0.75, size = 2, color = "lightgray") +
             geom_hline(yintercept = max(rules.all$correct)) +
             theme_bw() +
             geom_line(data = rules.all, aes(x = threshold, y = correct, linetype = days, color = days), size = 1.5) +
@@ -57,7 +57,7 @@ print(plot.all)
 rules.p <- rules %>% filter(type == "p")
 
 plot.p <- ggplot() +
-            geom_vline(xintercept = 0.7, size = 2, color = "lightgray") +
+            geom_vline(xintercept = 0.75, size = 2, color = "lightgray") +
             geom_hline(yintercept = max(rules.p$correct)) +
             theme_bw() +
             geom_line(data = rules.p, aes(x = threshold, y = correct, linetype = days, color = days), size = 1.5) +
@@ -67,7 +67,7 @@ plot.p <- ggplot() +
                   legend.position = "none",
                   axis.title = element_blank()) +
             scale_x_continuous(breaks = seq(0.4, 0.95, 0.1)) +
-            scale_y_continuous(breaks = seq(0, 0.8, 0.2)) +
+            scale_y_continuous(breaks = seq(0, 0.9, 0.2)) +
             scale_color_manual(values = plot.palette)
        
 print(plot.p)
@@ -79,7 +79,7 @@ print(plot.p)
 rules.np <- rules %>% filter(type == "np")
 
 plot.np <- ggplot() +
-           geom_vline(xintercept = 0.7, size = 2, color = "lightgray") +
+           geom_vline(xintercept = 0.75, size = 2, color = "lightgray") +
            geom_hline(yintercept = max(rules.np$correct)) +
            theme_bw() +
            geom_line(data = rules.np, aes(x = threshold, y = correct, linetype = days, color = days), size = 1.5) +
@@ -101,4 +101,6 @@ print(plot.np)
 bottom.panel <- plot_grid(plot.p, plot.np)
 
 plot_grid(plot.all, bottom.panel, rel_widths = c(2, 1, 1), nrow = 2)
+
+
 
